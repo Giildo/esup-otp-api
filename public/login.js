@@ -212,6 +212,13 @@ function orListToString (spans) {
   return spans.slice(0, -1).join(', ') + ', ' + _('or') + ' ' + spans.slice(-1)
 }
 
+/**
+ * Init the HTML template for the login page.
+ *
+ * @returns {void}
+ *
+ * @TODO Delete no used parts for a11y
+ */
 function addHtmlTemplate () {
   document.querySelector('form')?.insertAdjacentHTML(
     'beforeend',
