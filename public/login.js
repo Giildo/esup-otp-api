@@ -265,19 +265,6 @@ function addHtmlTemplate () {
   )
 }
 
-// for IE11 in pulse-secure
-Array.prototype.find = Array.prototype.find || function (callback) {
-  var list = Object(this)
-  var length = list.length >>> 0
-  var thisArg = arguments[1]
-  for (var i = 0; i < length; i++) {
-    var element = list[i]
-    if (callback.call(thisArg, element, i, list)) {
-      return element
-    }
-  }
-}
-
 /**
  * Like "element.onclick = func", but makes it accessible from the keyboard
  * @param {String|Element} element an HTML element, or a selector to get it

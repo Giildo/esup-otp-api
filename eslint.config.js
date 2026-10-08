@@ -52,6 +52,7 @@ export default defineConfig([
             "no-else-return": ["error", {
                 "allowElseIf": false
             }],
+            "no-extend-native": ["error"],
         },
     }
 ]);
