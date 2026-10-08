@@ -210,34 +210,6 @@ function orListToString (spans) {
 }
 
 /**
- * Simple wrapper for document.querySelector
- * @param {string} selector
- * @returns DOM element
- */
-function querySelector (selector) {
-  return document.querySelector(selector)
-}
-
-/**
- * Simple wrapper for document.querySelectorAll
- * @param {string} selector
- * @returns DOM element
- */
-function querySelectorAll (selector) {
-  return document.querySelectorAll(selector)
-}
-
-/**
- * execute condictional code if elt is not null
- * NB: to remove when we allow elt?.xxx()
- * @param {HTMLElement} elt
- * @param {function(HTMLElement): void} cb
- */
-function ifElt (elt, cb) {
-  if (elt) cb(elt)
-}
-
-/**
  * Small wrapper around document.createElement
  * @param {String} tag name
  * @param {*} attributes or text/html
@@ -263,7 +235,7 @@ function createElement (tag, opts = {}, children = []) {
 }
 
 function addHtmlTemplate () {
-  querySelector('form').append(createElement('div', {
+  document.querySelector('form')?.append(createElement('div', {
     class: 'main1', html: /*html*/`
 
         <div id="no-choices" class="d-none">${_('no_choices_html')}</div>
@@ -325,7 +297,7 @@ Array.prototype.find = Array.prototype.find || function (callback) {
  */
 function onclick (element, func) {
   if (typeof element === 'string' || element instanceof String) {
-    element = querySelector(element)
+    element = document.querySelector(element)
   }
 
   element.onclick = func
@@ -410,7 +382,7 @@ function autoSubmitIfValid (input) {
 }
 
 function clearErrors () {
-  ifElt(querySelector('#errors'), elt => elt.remove())
+  document.querySelector('#errors')?.remove()
 }
 
 const setGlobalClassForMethod = (() => {
@@ -425,7 +397,7 @@ const setGlobalClassForMethod = (() => {
 
 function show (idToShow, method) {
   ['no-choices', 'choices', 'code'].forEach(function (id) {
-    querySelector('#' + id).classList.toggle('d-none', id !== idToShow)
+    document.querySelector('#' + id)?.classList.toggle('d-none', id !== idToShow)
   })
   // focus on first focusable element
   let elt = document.getElementById(idToShow).querySelector('button, [href], input, select, [tabindex]')
@@ -448,18 +420,21 @@ function show (idToShow, method) {
 async function showMethod (params, chosen) {
   show('code', chosen.method)
 
-  for (const elt of querySelectorAll('#token, #submitCode, #toggle_code_visibility-LABEL')) {
+  for (const elt of document.querySelectorAll('#token, #submitCode, #toggle_code_visibility-LABEL')) {
     elt.classList.toggle('d-none', chosen.opts.hideSubmitCode === true)
   }
-  ifElt(querySelector('#token'), elt => elt.focus())
+  document.querySelector('#token')?.focus()
   updateCodeLabel(chosen.opts.codeLabel && await chosen.opts.codeLabel(params, chosen) || _('Please enter a code:'))
 
-  querySelector('#page_icon').src = params.apiUrl + 'public/images/page-' + (chosen.opts.overrideIcon || chosen.transport || chosen.method) + '.svg'
+  const pageIcon = document.querySelector('#page_icon')
+  if (pageIcon) {
+    pageIcon.src = params.apiUrl + 'public/images/page-' + (chosen.opts.overrideIcon || chosen.transport || chosen.method) + '.svg'
+  }
 
-  ifElt(querySelector('#back_to_choices'), elt => elt.classList.toggle('d-none', querySelectorAll('#methodChoices > li').length <= 1))
+  document.querySelector('#back_to_choices')?.classList.toggle('d-none', document.querySelectorAll('#methodChoices > li').length <= 1)
 
-  ifElt(querySelector('#retry'), elt => elt.classList.toggle('d-none', !(chosen.transport || chosen.opts.retryText)))
-  const retryElement = querySelector('#retry a')
+  document.querySelector('#retry')?.classList.toggle('d-none', !(chosen.transport || chosen.opts.retryText))
+  const retryElement = document.querySelector('#retry a')
   retryElement.text = chosen.opts.retryText || _('Receive a new code')
   onclick(retryElement, async () => {
     clearErrors()
@@ -470,7 +445,8 @@ async function showMethod (params, chosen) {
 }
 
 function updateCodeLabel (codeLabel) {
-  ifElt(querySelector('#code_label'), elt => elt.innerHTML = codeLabel)
+  const codeLabelElt = document.querySelector('#code_label')
+  if (codeLabelElt) codeLabelElt.innerHTML = codeLabel
 }
 
 async function initializeWebauthn (params, _chosen, _opts) {
@@ -615,8 +591,9 @@ async function initializeWebauthn (params, _chosen, _opts) {
 
   // Success response
   if (200 <= res.status && res.status < 300) {
-    querySelector('#token').value = verifdata.token
-    querySelector('#fm1').submit()
+    const token = document.querySelector('#token')
+    if (token) token.value = verifdata.token
+    document.querySelector('#fm1')?.submit()
   }
   // failed
   else {
@@ -630,7 +607,7 @@ async function initializeWebauthn (params, _chosen, _opts) {
 }
 
 function configureLinkToOtpManager (element, params) {
-  for (const elt of querySelectorAll(element)) {
+  for (const elt of document.querySelectorAll(element)) {
     elt.href = params.otpManagerUrl
   }
   onclick(element, function () {
@@ -849,7 +826,7 @@ async function displayChoices (params, userParams) {
     return
   }
 
-  querySelector('#methodChoices')?.replaceChildren(...choices.map(function (choice) {
+  document.querySelector('#methodChoices')?.replaceChildren(...choices.map(function (choice) {
     const button = createElement('a', { class: 'large' })
     onclick(button, async () => {
       clearErrors()
@@ -864,7 +841,7 @@ async function displayChoices (params, userParams) {
     return createElement('li', {}, [button])
   }))
   // focus the first method choice
-  ifElt(querySelector('#methodChoices li a'), elt => elt.focus())
+  document.querySelector('#methodChoices li a')?.focus()
 
   function getChoiceFromMethod (method) {
     return choices.find(choice => choice.method === method)
@@ -873,7 +850,7 @@ async function displayChoices (params, userParams) {
   const methodsRequiringExplicitChoice = ['bypass' /*, "random_code"*/ /*, "esupnfc"*/]
 
   const isOtpManager = service && (new URL(service).hostname == new URL(params.otpManagerUrl).hostname)
-  querySelector('#activateMoreMethods').classList.toggle('d-none', isOtpManager || choices.some(choice => !methodsRequiringExplicitChoice.includes(choice.method)))
+  document.querySelector('#activateMoreMethods').classList.toggle('d-none', isOtpManager || choices.some(choice => !methodsRequiringExplicitChoice.includes(choice.method)))
 
   /** @type {{method: ?String, time: ?number, auto: ?Boolean, verified: ?Boolean}} */
   const lastSendMessage = userParams.last_send_message || {}
@@ -947,8 +924,9 @@ async function mayInitializeSocket (params) {
   })
   socket.on('userAuth', function (data) {
     if (data.code == 'Ok') {
-      querySelector('#token').value = data.otp
-      querySelector('#fm1').submit()
+      const tokenElt = document.querySelector('#token')
+      if (tokenElt) tokenElt.value = data.otp
+      document.querySelector('#fm1')?.submit()
     }
   })
 }
@@ -990,4 +968,3 @@ export function millisecondsToFrenchText (ms) {
       dhm.hours >= 10 ? [h] : [h, m]
   ).filter(s => s).join(' et ')
 }
-   
