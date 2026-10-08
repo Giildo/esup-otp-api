@@ -46,6 +46,12 @@ export default defineConfig([
             "no-empty": ["error", {
                 "allowEmptyCatch": true,
             }],
+            "no-param-reassign": ["error", {
+                "props": true,
+            }],
+            "no-else-return": ["error", {
+                "allowElseIf": false
+            }],
         },
     }
 ]);

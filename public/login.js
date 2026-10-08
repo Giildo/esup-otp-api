@@ -199,14 +199,17 @@ function _ (key, args = {}) {
   return translate(key, args)
 }
 
+/**
+ * Converts an array of strings into a human-readable list with "or" before the last item.
+ *
+ * @param {string[]} spans - The array of strings to convert.
+ *
+ * @returns {string} - A human-readable string representation of the list.
+ */
 function orListToString (spans) {
-  if (spans.length === 1) {
-    return spans[0]
-  } else if (spans.length === 2) {
-    return spans.join(' ' + _('or') + ' ')
-  } else {
-    return spans.slice(0, -1).join(', ') + ', ' + _('or') + ' ' + spans.slice(-1)
-  }
+  if (spans.length === 1) return spans[0]
+  if (spans.length === 2) return spans.join(' ' + _('or') + ' ')
+  return spans.slice(0, -1).join(', ') + ', ' + _('or') + ' ' + spans.slice(-1)
 }
 
 function addHtmlTemplate () {
