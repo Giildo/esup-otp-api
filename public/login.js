@@ -141,34 +141,62 @@ const messages = {
   },
 }
 
-function unique (arr) {
-  return Array.from(new Set(arr))
-}
+/***
+ * INTERNATIONALISATION
+ */
 
-const languages = unique([...navigator.languages, 'en'].map(k => {
-  if (k in messages) return k
-  k = k.replace(/-.*/, '')
-  if (k in messages) return k
-  return undefined
-}).filter(e => e))
+/**
+ * Returns the list of supported languages.
+ * The list is built from the navigator.languages array, with 'en' added as a fallback.
+ *
+ * @type {string[]} - An array of supported language codes.
+ */
+const languages = Array.from([...navigator.languages, 'en'].reduce((acc, lang) => {
+  if (lang in messages) {
+    acc.add(lang)
+    return acc
+  }
 
-function translate (s, args, langs) {
-  for (const lang of langs) {
-    const s_ = messages[lang][s]
-    if (s_) {
-      s = s_
+  const langWithoutRegion = lang.split('-')[0]
+  if (langWithoutRegion in messages) acc.add(langWithoutRegion)
+  return acc
+}, new Set()))
+
+/**
+ * Translates a key into the user's preferred language, with optional arguments for string replacement.
+ *
+ * @param {string} key - The key to translate.
+ * @param {Object.<string, string>} [args={}] - Optional arguments for string replacement in the translation.
+ *
+ * @returns {string} - The translated string, or the key itself if no translation is found.
+ */
+function translate (key, args = {}) {
+  let translation = key
+  for (const lang of languages) {
+    const translated = messages[lang]?.[key]
+    if (translated) {
+      translation = translated
       break
     }
     if (lang === 'en') break // "en" does not need translation (except for "xxx_html" keys which must have been handled above)
   }
-  for (const [key, val] of Object.entries(args)) {
-    s = s.replace(key, val)
+
+  for (const [placeholder, val] of Object.entries(args)) {
+    translation = translation.replace(placeholder, val)
   }
-  return s
+  return translation
 }
 
-function _ (s, args) {
-  return translate(s, args || {}, languages)
+/**
+ * Shorthand function for translating a string with optional arguments.
+ *
+ * @param {string} key - The key to translate.
+ * @param {Object.<string, string>} [args={}] - Optional arguments for string replacement in the translation.
+ *
+ * @returns {string} - The translated string, or the key itself if no translation is found.
+ */
+function _ (key, args = {}) {
+  return translate(key, args)
 }
 
 function orListToString (spans) {
