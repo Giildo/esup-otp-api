@@ -209,35 +209,10 @@ function orListToString (spans) {
   }
 }
 
-/**
- * Small wrapper around document.createElement
- * @param {String} tag name
- * @param {*} attributes or text/html
- * @returns the created element
- */
-function createElement (tag, opts = {}, children = []) {
-  const element = document.createElement(tag)
-
-  for (const [key, value] of Object.entries(opts)) {
-    if (key === 'class') {
-      element.className = value
-    } else if (key === 'text') {
-      element.textContent = value
-    } else if (key === 'html') {
-      element.innerHTML = value
-    } else {
-      element.setAttribute(key, value)
-    }
-  }
-  if (children.length) element.append(...children)
-
-  return element
-}
-
 function addHtmlTemplate () {
-  document.querySelector('form')?.append(createElement('div', {
-    class: 'main1', html: /*html*/`
-
+  document.querySelector('form')?.insertAdjacentHTML(
+    'beforeend',
+    `<div class="main1">
         <div id="no-choices" class="d-none">${_('no_choices_html')}</div>
 
         <div id="choices">
@@ -273,9 +248,11 @@ function addHtmlTemplate () {
                 <li id="back_to_choices"><a>${_('Other connection method')}</a></li>
             </ul>
           </div>
-          <img alt="" id="page_icon"></div>
+          <img alt="" id="page_icon">
+        </div>
+      </div>
     `,
-  }))
+  )
 }
 
 // for IE11 in pulse-secure
@@ -827,18 +804,24 @@ async function displayChoices (params, userParams) {
   }
 
   document.querySelector('#methodChoices')?.replaceChildren(...choices.map(function (choice) {
-    const button = createElement('a', { class: 'large' })
+    const li = document.createElement('li')
+    const button = document.createElement('a')
+    button.classList.add('large')
     onclick(button, async () => {
       clearErrors()
       await displayMethod(params, choice, {})
       return false
     })
-    button.append(createElement('span', { text: choice.text }))
-    button.append(createElement('img', {
-      src: params.apiUrl + 'public/images/liste-' + (choice.opts.overrideIcon || choice.transport || choice.method) + '.svg',
-      alt: '',
-    }))
-    return createElement('li', {}, [button])
+    const span = document.createElement('span')
+    span.innerHTML = choice.text
+
+    const img = document.createElement('img')
+    img.src = params.apiUrl + 'public/images/liste-' + (choice.opts.overrideIcon || choice.transport || choice.method) + '.svg'
+    img.alt = ''
+
+    button.append(span, img)
+    li.append(button)
+    return li
   }))
   // focus the first method choice
   document.querySelector('#methodChoices li a')?.focus()
