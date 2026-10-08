@@ -209,12 +209,6 @@ function orListToString (spans) {
   }
 }
 
-// to remove when old Edge compatibility is not needed
-function replaceChildren (elt, ...children) {
-  elt.innerHTML = ''
-  elt.append(...children)
-}
-
 /**
  * Simple wrapper for document.querySelector
  * @param {string} selector
@@ -854,7 +848,8 @@ async function displayChoices (params, userParams) {
     }
     return
   }
-  replaceChildren(querySelector('#methodChoices'), ...choices.map(function (choice) {
+
+  querySelector('#methodChoices')?.replaceChildren(...choices.map(function (choice) {
     const button = createElement('a', { class: 'large' })
     onclick(button, async () => {
       clearErrors()
