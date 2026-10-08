@@ -1,4 +1,4 @@
-const msgs = {
+const messages = {
   fr: {
     'or': 'ou',
     'You have no registered factors': 'Vous n’avez aucun facteur enregistré',
@@ -145,16 +145,16 @@ function unique (arr) {
   return Array.from(new Set(arr))
 }
 
-const langs = unique([...navigator.languages, 'en'].map(k => {
-  if (k in msgs) return k
+const languages = unique([...navigator.languages, 'en'].map(k => {
+  if (k in messages) return k
   k = k.replace(/-.*/, '')
-  if (k in msgs) return k
+  if (k in messages) return k
   return undefined
 }).filter(e => e))
 
 function translate (s, args, langs) {
   for (const lang of langs) {
-    const s_ = msgs[lang][s]
+    const s_ = messages[lang][s]
     if (s_) {
       s = s_
       break
@@ -168,10 +168,10 @@ function translate (s, args, langs) {
 }
 
 function _ (s, args) {
-  return translate(s, args || {}, langs)
+  return translate(s, args || {}, languages)
 }
 
-function or_list_to_string (spans) {
+function orListToString (spans) {
   if (spans.length === 1) {
     return spans[0]
   } else if (spans.length === 2) {
@@ -240,7 +240,7 @@ function createElement (tag, opts = {}, children = []) {
   return element
 }
 
-function add_html_template () {
+function addHtmlTemplate () {
   querySelector('form').append(createElement('div', {
     class: 'main1', html: /*html*/`
 
@@ -379,7 +379,7 @@ function bufferToBase64URLString (buffer) {
 }
 
 
-function autosubmitIfValid (input) {
+function autoSubmitIfValid (input) {
   if (!input.validationMessage) {
     const form = document.getElementById('fm1')
     form.submit()
@@ -387,11 +387,11 @@ function autosubmitIfValid (input) {
   }
 }
 
-function clear_errors () {
+function clearErrors () {
   ifElt(querySelector('#errors'), elt => elt.remove())
 }
 
-const set_global_class_for_method = (() => {
+const setGlobalClassForMethod = (() => {
   let previousClass
   return (method) => {
     const elt = document.getElementById('fm1').parentElement
@@ -411,28 +411,28 @@ function show (idToShow, method) {
 
   switch (idToShow) {
     case 'choices':
-      set_global_class_for_method('show-choices')
+      setGlobalClassForMethod('show-choices')
       mayDisconnectSocket()
       break
     case 'no-choices':
-      set_global_class_for_method('no-choices')
+      setGlobalClassForMethod('no-choices')
       break
     default:
-      set_global_class_for_method('method-' + method)
+      setGlobalClassForMethod('method-' + method)
       break
   }
 }
 
-async function show_method (params, chosen) {
+async function showMethod (params, chosen) {
   show('code', chosen.method)
 
   for (const elt of querySelectorAll('#token, #submitCode, #toggle_code_visibility-LABEL')) {
-    elt.classList.toggle('d-none', chosen.opts.hide_submitCode === true)
+    elt.classList.toggle('d-none', chosen.opts.hideSubmitCode === true)
   }
   ifElt(querySelector('#token'), elt => elt.focus())
-  updateCode_label(chosen.opts.code_label && await chosen.opts.code_label(params, chosen) || _('Please enter a code:'))
+  updateCodeLabel(chosen.opts.codeLabel && await chosen.opts.codeLabel(params, chosen) || _('Please enter a code:'))
 
-  querySelector('#page_icon').src = params.apiUrl + 'public/images/page-' + (chosen.opts.override_icon || chosen.transport || chosen.method) + '.svg'
+  querySelector('#page_icon').src = params.apiUrl + 'public/images/page-' + (chosen.opts.overrideIcon || chosen.transport || chosen.method) + '.svg'
 
   ifElt(querySelector('#back_to_choices'), elt => elt.classList.toggle('d-none', querySelectorAll('#methodChoices > li').length <= 1))
 
@@ -440,21 +440,21 @@ async function show_method (params, chosen) {
   const retryElement = querySelector('#retry a')
   retryElement.text = chosen.opts.retryText || _('Receive a new code')
   onclick(retryElement, async () => {
-    clear_errors()
-    await display_method(params, chosen, {})
+    clearErrors()
+    await displayMethod(params, chosen, {})
   })
 
   return false
 }
 
-function updateCode_label (code_label) {
-  ifElt(querySelector('#code_label'), elt => elt.innerHTML = code_label)
+function updateCodeLabel (codeLabel) {
+  ifElt(querySelector('#code_label'), elt => elt.innerHTML = codeLabel)
 }
 
 async function initializeWebauthn (params, _chosen, _opts) {
 
   function displayTitle ({ title, desc = '' }) {
-    updateCode_label('<h2><b>' + 'WebAuthn' + '</b><br>' + title + '</h2>' + desc)
+    updateCodeLabel('<h2><b>' + 'WebAuthn' + '</b><br>' + title + '</h2>' + desc)
   }
 
   // PublicKeyCredential can not be serialized
@@ -499,7 +499,7 @@ async function initializeWebauthn (params, _chosen, _opts) {
       return `<span class="factor" title="${title}">${name}</span>`
     })
     displayTitle({
-      title: _('Utilisez %FACTORS% pour vous authentifier.', { '%FACTORS%': or_list_to_string(spans) }),
+      title: _('Utilisez %FACTORS% pour vous authentifier.', { '%FACTORS%': orListToString(spans) }),
     })
   }
 
@@ -630,13 +630,13 @@ export function getUserOtpMethods_and_displayChoices (params) {
   // ensure esup-otp-api base url has a trailing slash
   if (!params.apiUrl.match(/[/]$/)) params.apiUrl += '/'
 
-  add_html_template()
+  addHtmlTemplate()
 
   document.getElementById('token').oninput = function () {
-    autosubmitIfValid(this)
+    autoSubmitIfValid(this)
   }
   onclick('#back_to_choices', () => {
-    clear_errors()
+    clearErrors()
     show('choices')
   })
 
@@ -664,8 +664,8 @@ const methods = {
     label: {
       '': _('Authenticate by physical factor (WebAuthn)'),
     },
-    override_icon: 'cle',
-    hide_submitCode: true,
+    overrideIcon: 'cle',
+    hideSubmitCode: true,
     retryText: 'Réessayer',
     initialise: initializeWebauthn,
   },
@@ -673,18 +673,18 @@ const methods = {
     label: {
       push: _('Authenticate via the Esup Auth application on your %TRANSPORT%'),
     },
-    hide_submitCode: true,
+    hideSubmitCode: true,
     retryText: _('Request a new notification'),
-    code_label_afterSubmit: _('Open the Esup Auth application on your mobile %TRANSPORT% to validate the authentication.'),
+    codeLabelAfterSubmit: _('Open the Esup Auth application on your mobile %TRANSPORT% to validate the authentication.'),
   },
   totp: {
     label: {
       '': _('Enter a TOTP code'),
     },
-    code_label: (_params, _chosen) => {
+    codeLabel: (_params, _chosen) => {
       return _('Please enter the code displayed on your TOTP application:')
     },
-    override_icon: 'no_transport',
+    overrideIcon: 'no_transport',
   },
   random_code_mail: {
     label: {
@@ -707,13 +707,13 @@ const methods = {
     label: {
       '': _('Authenticate with your multi-service card on an NFC-compatible smartphone'),
     },
-    override_icon: 'carte',
-    hide_submitCode: true,
-    code_label: async (params, _chosen) => {
-      const esupnfc_secret = await (fetch(`${params.apiUrl}esupnfc/infos?requireDeepLink=true`, { method: 'GET' })
+    overrideIcon: 'carte',
+    hideSubmitCode: true,
+    codeLabel: async (params, _chosen) => {
+      const esupNfcSecret = await (fetch(`${params.apiUrl}esupnfc/infos?requireDeepLink=true`, { method: 'GET' })
           .then(res => res.json())
       )
-      if (esupnfc_secret.code !== 'Ok') {
+      if (esupNfcSecret.code !== 'Ok') {
         return _('Authenticate with your multi-service card on an NFC-compatible smartphone')
       }
 
@@ -721,8 +721,8 @@ const methods = {
         '%ANDROID_APP_URL%': 'https://play.google.com/store/apps/details?id=org.esupportail.esupAuth',
         '%IOS_APP_URL%': 'https://apps.apple.com/fr/app/esup-auth/id1563904941',
         '%QRCODE_SRC%': `${params.apiUrl}esupnfc/infos.svg`,
-        '%DEEPLINK%': esupnfc_secret.server_infos.deepLink,
-        '%ETABLISSEMENT%': esupnfc_secret.server_infos.etablissement,
+        '%DEEPLINK%': esupNfcSecret.server_infos.deepLink,
+        '%ETABLISSEMENT%': esupNfcSecret.server_infos.etablissement,
         '%API_URL%': params.apiUrl,
       }
 
@@ -737,23 +737,23 @@ const methods = {
     label: {
       '': _('Enter a single-use backup code'),
     },
-    code_label: (_params, _chosen) => {
+    codeLabel: (_params, _chosen) => {
       return _('Please enter a single-use backup code:')
     },
-    override_icon: 'no_transport',
+    overrideIcon: 'no_transport',
   },
 }
 
 const transports = {
   mail: {
-    code_label_afterSubmit: _('A code has been sent to your email %TRANSPORT%,<br>enter it here to log in.'),
+    codeLabelAfterSubmit: _('A code has been sent to your email %TRANSPORT%,<br>enter it here to log in.'),
   },
   sms: {
-    code_label_afterSubmit: _('A code has been sent to %TRANSPORT%,<br>enter it here to log in.'),
+    codeLabelAfterSubmit: _('A code has been sent to %TRANSPORT%,<br>enter it here to log in.'),
   },
 }
 
-async function display_method (params, chosen, opts) {
+async function displayMethod (params, chosen, opts) {
   try {
     localStorage.setItem('lastLocalAttempt', JSON.stringify({
       method: chosen.method,
@@ -773,32 +773,32 @@ async function display_method (params, chosen, opts) {
   if (chosen.transport) {
     submitCodeRequest(params, chosen, opts)
   }
-  await show_method(params, chosen)
+  await showMethod(params, chosen)
   if (chosen.opts.initialise) chosen.opts.initialise(params, chosen, opts)
 }
 
 /**
- * @returns {[{method: String, transport: String, transport_text: ?String, text: String, opts: any}]}
+ * @returns {[{method: String, transport: String, transportText: ?String, text: String, opts: any}]}
  */
-function computeChoices (_params, methods_and_transports) {
+function computeChoices (_params, methodsAndTransports) {
   let choices = []
   Object.entries(methods).forEach(function ([method, opts]) {
 
-    if (!(methods_and_transports.methods[method] || {}).active) {
+    if (!(methodsAndTransports.methods[method] || {}).active) {
       return
     }
 
-    var params = methods_and_transports.methods[method];
+    var params = methodsAndTransports.methods[method];
 
     (params.transports.length ? params.transports : ['']).forEach(function (transport) {
       //if (transport !== '') return;
-      var transport_text = transport && methods_and_transports.transports[transport]
+      var transportText = transport && methodsAndTransports.transports[transport]
       if (opts.label[transport]) {
-        var text = opts.label[transport].replace('%TRANSPORT%', transport_text)
+        var text = opts.label[transport].replace('%TRANSPORT%', transportText)
         choices.push({
           method: method,
           transport: transport,
-          transport_text: transport_text,
+          transportText: transportText,
           text: text,
           // to replace with { ... } when old Edge compatibility is not needed (cf neededObjectExpression > SpreadElement in eslint.config.js)
           opts: Object.assign({}, opts, transports[transport]),
@@ -811,17 +811,17 @@ function computeChoices (_params, methods_and_transports) {
   return choices
 }
 
-function server_log (vals) {
+function serverLog (vals) {
   fetch('log?' + new URLSearchParams(vals))
 }
 
-async function displayChoices (params, user_params) {
-  let choices = computeChoices(params, user_params)
+async function displayChoices (params, userParams) {
+  let choices = computeChoices(params, userParams)
   const service = new URLSearchParams(location.search).get('service')
   if (choices.length === 0) {
     show('no-choices')
     try {
-      server_log({ warn: 'no-choices', uid: params.uid, service: service })
+      serverLog({ warn: 'no-choices', uid: params.uid, service: service })
     } catch (_e) {
     }
     return
@@ -829,13 +829,13 @@ async function displayChoices (params, user_params) {
   replaceChildren(querySelector('#methodChoices'), ...choices.map(function (choice) {
     const button = createElement('a', { class: 'large' })
     onclick(button, async () => {
-      clear_errors()
-      await display_method(params, choice, {})
+      clearErrors()
+      await displayMethod(params, choice, {})
       return false
     })
     button.append(createElement('span', { text: choice.text }))
     button.append(createElement('img', {
-      src: params.apiUrl + 'public/images/liste-' + (choice.opts.override_icon || choice.transport || choice.method) + '.svg',
+      src: params.apiUrl + 'public/images/liste-' + (choice.opts.overrideIcon || choice.transport || choice.method) + '.svg',
       alt: '',
     }))
     return createElement('li', {}, [button])
@@ -853,30 +853,30 @@ async function displayChoices (params, user_params) {
   querySelector('#activateMoreMethods').classList.toggle('d-none', isOtpManager || choices.some(choice => !methodsRequiringExplicitChoice.includes(choice.method)))
 
   /** @type {{method: ?String, time: ?number, auto: ?Boolean, verified: ?Boolean}} */
-  const last_send_message = user_params.last_send_message || {}
+  const lastSendMessage = userParams.last_send_message || {}
   /** @type {{method: ?String, time: ?number}} */
-  const last_validated = user_params.last_validated || {}
+  const lastValidated = userParams.last_validated || {}
   /** @type {{method: ?String, time: ?number}} */
   const lastLocalAttempt = JSON.parse(localStorage.getItem('lastLocalAttempt') || '{}')
 
-  if (last_validated.method && !document.hidden) {
+  if (lastValidated.method && !document.hidden) {
     // otherwise it means that lastLocalAttempt has failed
-    if (lastLocalAttempt.time && lastLocalAttempt.time <= last_validated.time) {
+    if (lastLocalAttempt.time && lastLocalAttempt.time <= lastValidated.time) {
       const method = lastLocalAttempt.method
       if (!methodsRequiringExplicitChoice.includes(method)) {
         const chosen = getChoiceFromMethod(method)
         if (chosen) {
-          return display_method(params, chosen, { auto: true })
+          return displayMethod(params, chosen, { auto: true })
         }
       }
     }
-    const lastValidatedMethodRecentlyFailed = last_send_message.method == last_validated.method && last_send_message.time > last_validated.time
+    const lastValidatedMethodRecentlyFailed = lastSendMessage.method == lastValidated.method && lastSendMessage.time > lastValidated.time
     if (!lastValidatedMethodRecentlyFailed) {
-      const method = last_validated.method
+      const method = lastValidated.method
       if (!methodsRequiringExplicitChoice.includes(method)) {
         const chosen = getChoiceFromMethod(method)
         if (chosen) {
-          return display_method(params, chosen, { auto: true })
+          return displayMethod(params, chosen, { auto: true })
         }
       }
     }
@@ -897,16 +897,16 @@ async function submitCodeRequest (params, chosen, opts) {
     console.log('Something is broken : ', data)
   } else {
     console.log(chosen)
-    let code_label = chosen.opts.code_label_afterSubmit || _('A code has been sent to %TRANSPORT%,<br>enter it here to log in.')
+    let codeLabel = chosen.opts.codeLabelAfterSubmit || _('A code has been sent to %TRANSPORT%,<br>enter it here to log in.')
     if (chosen.method == 'passcode_grid') {
       const challenge = data.message.challenge
-      code_label = _('Enter the code shown in the cell at the intersection of <strong>row %LINE%</strong> and <strong>column %COLUMN%</strong> of your passcode grid.',
+      codeLabel = _('Enter the code shown in the cell at the intersection of <strong>row %LINE%</strong> and <strong>column %COLUMN%</strong> of your passcode grid.',
         {
           '%LINE%': String.fromCharCode(challenge[0] + 'A'.charCodeAt(0)),
           '%COLUMN%': challenge[1] + 1,
         })
     }
-    updateCode_label(code_label.replace('%TRANSPORT%', chosen.transport_text))
+    updateCodeLabel(codeLabel.replace('%TRANSPORT%', chosen.transportText))
   }
 }
 
@@ -937,7 +937,7 @@ function mayDisconnectSocket () {
   }
 }
 
-function milliseconds_to_DaysHoursMinutes (ms) {
+function millisecondsToDaysHoursMinutes (ms) {
   const minutes = Math.round(ms / 60 / 1000)
   return {
     days: Math.floor(minutes / 60 / 24),
@@ -946,21 +946,21 @@ function milliseconds_to_DaysHoursMinutes (ms) {
   }
 }
 
-export function milliseconds_to_french_text (ms) {
+export function millisecondsToFrenchText (ms) {
   const translate = {
     days: ['jour', 'jours'],
     hours: ['heure', 'heures'],
     minutes: ['minute', 'minutes'],
   }
-  const dhm = milliseconds_to_DaysHoursMinutes(ms)
-  const to_text = (field) => {
+  const dhm = millisecondsToDaysHoursMinutes(ms)
+  const toText = (field) => {
     const val = dhm[field]
     return val === 0 ? '' : val + ' ' + translate[field][val > 1 ? 1 : 0]
   }
 
-  const d = to_text('days')
-  const h = to_text('hours')
-  const m = to_text('minutes')
+  const d = toText('days')
+  const h = toText('hours')
+  const m = toText('minutes')
 
   return (
     dhm.days >= 7 ? [d] : dhm.days >= 1 ? [d, h] :
