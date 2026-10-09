@@ -284,23 +284,27 @@ function onclick (element, func) {
 }
 
 /**
- * wait for the browser to update the displayed title (otherwise, on Firefox, displayTitle() is omitted)
- */
-async function afterNextPaint () {
-  return new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)))
-}
-
-/** base64url helper functions **/
-/**
- * Convert from a Base64URL-encoded string to an Array Buffer. Best used when converting a
- * credential ID from a JSON string to an ArrayBuffer, like in allowCredentials or
- * excludeCredentials
+ * Returns a promise that resolves after the next two animation frames, allowing for DOM updates to be rendered before proceeding.
  *
- * Helper method to compliment `bufferToBase64URLString`
+ * @returns {Promise<void>} A promise that resolves after the next two animation frames.
  */
-function base64URLStringToBuffer (base64URLString) {
+const afterNextPaint = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+
+/***
+ * BASE64URL HELPER FUNCTIONS
+ **/
+/**
+ * Converts a Base64URL-encoded string into an ArrayBuffer.
+ *
+ * Handles standard Base64 conversion, padding calculation, and byte extraction.
+ * Useful for binary WebAuthn credentials (e.g. allowCredentials, excludeCredentials).
+ *
+ * @param {string} base64URLString - The Base64URL encoded input string.
+ * @returns {ArrayBuffer} The decoded binary data as an ArrayBuffer.
+ */
+const base64URLStringToBuffer = (base64URLString) => {
   // Convert from Base64URL to Base64
-  const base64 = base64URLString.replace(/-/g, '+').replace(/_/g, '/')
+  const base64 = base64URLString.replaceAll('-', '+').replaceAll('_', '/')
   /**
    * Pad with '=' until it's a multiple of four
    * (4 - (85 % 4 = 1) = 3) % 4 = 3 padding
@@ -319,31 +323,34 @@ function base64URLStringToBuffer (base64URLString) {
   const bytes = new Uint8Array(buffer)
 
   for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i)
+    bytes[i] = binary.codePointAt(i)
   }
 
   return buffer
 }
 
 /**
- * Convert the given array buffer into a Base64URL-encoded string. Ideal for converting various
- * credential response ArrayBuffers to string for sending back to the server as JSON.
+ * Converts an ArrayBuffer into a Base64URL-encoded string.
  *
- * Helper method to compliment `base64URLStringToBuffer`
+ * Encodes binary data into Base64 and strips standard padding and URL-unsafe characters.
+ * Useful for serializing WebAuthn credential responses to JSON.
  *
- * source: https://github.com/MasterKale/SimpleWebAuthn/blob/master/packages/browser/src/helpers/bufferToBase64URLString.ts
+ * @see https://github.com/MasterKale/SimpleWebAuthn/blob/master/packages/browser/src/helpers/bufferToBase64URLString.ts
+ *
+ * @param {ArrayBuffer} buffer - The binary buffer to encode.
+ * @returns {string} The resulting Base64URL encoded string.
  */
-function bufferToBase64URLString (buffer) {
+const bufferToBase64URLString = (buffer) => {
   const bytes = new Uint8Array(buffer)
   let str = ''
 
   for (const charCode of bytes) {
-    str += String.fromCharCode(charCode)
+    str += String.fromCodePoint(charCode)
   }
 
   const base64String = btoa(str)
 
-  return base64String.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+  return base64String.replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '')
 }
 
 
