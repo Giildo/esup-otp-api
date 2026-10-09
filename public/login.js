@@ -354,7 +354,18 @@ const bufferToBase64URLString = (buffer) => {
 }
 
 
-function autoSubmitIfValid (input) {
+/**
+ * Automatically submits the authentication form if the input passes HTML5 validation.
+ *
+ * Marks the form as `inert` upon submission to freeze user interactions and prevent
+ * duplicate submissions (e.g. password managers appending an automatic Enter key
+ * concurrently with a manual Enter press, which invalidates single-use TOTP codes).
+ *
+ * @param {HTMLInputElement} input - The OTP/token input element to validate.
+ *
+ * @returns {void}
+ */
+const autoSubmitIfValid = (input) => {
   if (!input.validationMessage) {
     const form = document.getElementById('fm1')
     form.submit()
@@ -362,7 +373,12 @@ function autoSubmitIfValid (input) {
   }
 }
 
-function clearErrors () {
+/**
+ * Removes any existing error messages from the DOM.
+ *
+ * @returns {void}
+ */
+const clearErrors = () => {
   document.querySelector('#errors')?.remove()
 }
 
