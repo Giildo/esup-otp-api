@@ -413,6 +413,68 @@ const mayDisconnectSocket = () => {
 }
 
 /***
+ * TIME & DURATION HELPERS
+ **/
+
+/**
+ * @typedef {Object} DurationBreakdown
+ * @property {number} days - Number of full days.
+ * @property {number} hours - Remaining hours (0-23).
+ * @property {number} minutes - Remaining minutes (0-59).
+ */
+
+/**
+ * Decomposes a duration in milliseconds into days, hours, and minutes.
+ *
+ * @param {number} ms - Duration in milliseconds.
+ *
+ * @returns {DurationBreakdown} Breakdown object containing days, hours, and minutes.
+ */
+const millisecondsToDaysHoursMinutes = (ms) => {
+  const minutes = Math.round(ms / 60 / 1000)
+  return {
+    days: Math.floor(minutes / 60 / 24),
+    hours: Math.floor(minutes / 60) % 24,
+    minutes: minutes % 60,
+  }
+}
+
+/**
+ * Formats a duration in milliseconds into human-readable French text.
+ *
+ * Dynamically adjusts detail level:
+ * - 7+ days: displays days only (e.g. "8 jours")
+ * - 1-6 days: displays days and hours (e.g. "2 jours et 3 heures")
+ * - 10-23 hours: displays hours only (e.g. "14 heures")
+ * - Under 10 hours: displays hours and minutes (e.g. "4 heures et 25 minutes")
+ *
+ * @param {number} ms - Duration in milliseconds to format.
+ *
+ * @returns {string} Human-readable localized duration string.
+ */
+export const millisecondsToFrenchText = (ms) => {
+  const units = {
+    days: { singular: 'jour', plural: 'jours' },
+    hours: { singular: 'heure', plural: 'heures' },
+    minutes: { singular: 'minute', plural: 'minutes' },
+  }
+
+  const dhm = millisecondsToDaysHoursMinutes(ms)
+
+  const formatUnit = (field) => {
+    const val = dhm[field]
+    if (val === 0) return ''
+    const label = val > 1 ? units[field].plural : units[field].singular
+    return `${val} ${label}`
+  }
+
+  if (dhm.days >= 7) return formatUnit('days')
+  if (dhm.days >= 1) return [formatUnit('days'), formatUnit('hours')].filter(Boolean).join(' et ')
+  if (dhm.hours >= 10) return formatUnit('hours')
+  return [formatUnit('hours'), formatUnit('minutes')].filter(Boolean).join(' et ')
+}
+
+/***
  * UI & FORM INTERACTIONS
  **/
 
@@ -978,35 +1040,4 @@ async function submitCodeRequest (params, chosen, opts) {
     }
     updateCodeLabel(codeLabel.replace('%TRANSPORT%', chosen.transportText))
   }
-}
-
-function millisecondsToDaysHoursMinutes (ms) {
-  const minutes = Math.round(ms / 60 / 1000)
-  return {
-    days: Math.floor(minutes / 60 / 24),
-    hours: Math.floor(minutes / 60) % 24,
-    minutes: minutes % 60,
-  }
-}
-
-export function millisecondsToFrenchText (ms) {
-  const translate = {
-    days: ['jour', 'jours'],
-    hours: ['heure', 'heures'],
-    minutes: ['minute', 'minutes'],
-  }
-  const dhm = millisecondsToDaysHoursMinutes(ms)
-  const toText = (field) => {
-    const val = dhm[field]
-    return val === 0 ? '' : val + ' ' + translate[field][val > 1 ? 1 : 0]
-  }
-
-  const d = toText('days')
-  const h = toText('hours')
-  const m = toText('minutes')
-
-  return (
-    dhm.days >= 7 ? [d] : dhm.days >= 1 ? [d, h] :
-      dhm.hours >= 10 ? [h] : [h, m]
-  ).filter(s => s).join(' et ')
 }
