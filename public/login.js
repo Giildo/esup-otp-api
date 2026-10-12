@@ -355,7 +355,7 @@ const bufferToBase64URLString = (buffer) => {
 }
 
 /***
-  * SOCKET.IO INTERACTIONS
+ * SOCKET.IO INTERACTIONS
  **/
 
 /**
@@ -576,7 +576,6 @@ function updateCodeLabel (codeLabel) {
 }
 
 async function initializeWebauthn (params, _chosen, _opts) {
-
   function displayTitle ({ title, desc = '' }) {
     updateCodeLabel('<h2><b>' + 'WebAuthn' + '</b><br>' + title + '</h2>' + desc)
   }
@@ -750,17 +749,34 @@ function configureLinkToOtpManager (element, params) {
   })
 }
 
-export function getUserOtpMethods_and_displayChoices (params) {
-  if (!params.apiUrl) throw 'missing params.apiUrl'
-  // ensure esup-otp-api base url has a trailing slash
-  if (!params.apiUrl.match(/[/]$/)) params.apiUrl += '/'
+/**
+ * Main entry point for initializing multi-factor authentication (MFA) in the CAS view.
+ *
+ * Normalizes input parameters without mutating the caller reference, injects the initial
+ * view markup, binds global UI listeners, configures external OTP manager links,
+ * and fetches the user's available authentication factors to trigger method selection.
+ *
+ * @param {CasAuthParams} rawParams - Raw configuration parameters received from the CAS template.
+ *
+ * @throws {Error} Throws if `rawParams.apiUrl` is not provided.
+ *
+ * @returns {void}
+ */
+export function getUserOtpMethods_and_displayChoices (rawParams) {
+  if (!rawParams.apiUrl) throw new Error('missing params.apiUrl')
+
+  const params = {
+    ...rawParams,
+    apiUrl: rawParams.apiUrl.endsWith('/') ? rawParams.apiUrl : `${rawParams.apiUrl}/`,
+  }
 
   addHtmlTemplate()
 
-  document.getElementById('token').oninput = function () {
-    autoSubmitIfValid(this)
-  }
-  onclick('#back_to_choices', () => {
+  document.getElementById('token')?.addEventListener('input', (e) => {
+    autoSubmitIfValid(e.target)
+  })
+
+  document.getElementById('back_to_choices')?.addEventListener('click', function () {
     clearErrors()
     show('choices')
   })
@@ -768,19 +784,20 @@ export function getUserOtpMethods_and_displayChoices (params) {
   configureLinkToOtpManager('#no-choices a', params)
   configureLinkToOtpManager('#activateMoreMethods a', params)
 
-  fetch(params.apiUrl + 'users/' + params.uid + '/' + params.userHash).then(response => (
-    response.json()
-  )).then(async function (data) {
-    if (data.code != 'Ok') {
-      alert(_('Error, please try again later'))
-      return
-    }
-    try {
-      await displayChoices(params, data.user)
-    } catch (e) {
-      alert(_('Error') + ' ' + e)
-    }
-  })
+  fetch(params.apiUrl + 'users/' + params.uid + '/' + params.userHash)
+    .then(response => response.json())
+    .then(async function (data) {
+      if (data.code !== 'Ok') {
+        alert(_('Error, please try again later'))
+        return
+      }
+
+      try {
+        await displayChoices(params, data.user)
+      } catch (e) {
+        alert(_('Error') + ' ' + e)
+      }
+    })
 }
 
 const methods = {
