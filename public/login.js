@@ -731,22 +731,54 @@ async function initializeWebauthn (params, _chosen, _opts) {
   }
 }
 
-function configureLinkToOtpManager (element, params) {
-  for (const elt of document.querySelectorAll(element)) {
-    elt.href = params.otpManagerUrl
-  }
-  onclick(element, function () {
-    const otpManagerWindow = window.open(params.otpManagerUrl)
+let isOtpManagerListenerInitialized = false
 
+/**
+ * Configures links directing users to the external OTP Manager.
+ *
+ * Sets standard fallback attributes (`target="_blank"`, `rel="noopener noreferrer"`)
+ * and intercepts clicks to open a managed popup. Listens globally for postMessage
+ * notifications from the manager's origin to automatically close the popup and
+ * reload the CAS authentication session once factor enrollment completes.
+ *
+ * @param {string} element - CSS selector matching the anchor links to configure.
+ * @param {CasAuthParams} params - Authentication configuration parameters containing `otpManagerUrl`.
+ *
+ * @returns {void}
+ */
+const configureLinkToOtpManager = (element, params) => {
+  if (!params.otpManagerUrl) return
+
+  const links = document.querySelectorAll(element)
+  if (!links.length) return
+
+  const targetOrigin = new URL(params.otpManagerUrl).origin
+  let otpManagerWindow = null
+
+  if (!isOtpManagerListenerInitialized) {
     window.addEventListener('message', (event) => {
+      // Security check: only accept messages from the expected origin
+      if (event.origin !== targetOrigin) return
+
       if (event.data === 'closeOtpManagerWindow') {
-        otpManagerWindow && otpManagerWindow.close()
+        otpManagerWindow?.close()
         location.reload()
       }
     })
+    isOtpManagerListenerInitialized = true
+  }
 
-    return false
-  })
+  for (const link of links) {
+    link.href = params.otpManagerUrl
+    // Fallback: if the user opens the link in a new tab or if blocked by a popup blocker, it will open in a new tab
+    link.target = '_blank'
+    link.rel = 'noopener noreferrer'
+
+    link.addEventListener('click', (event) => {
+      event.preventDefault()
+      otpManagerWindow = window.open(params.otpManagerUrl)
+    })
+  }
 }
 
 /**
