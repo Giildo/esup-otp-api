@@ -293,6 +293,7 @@ const afterNextPaint = () => new Promise(resolve => requestAnimationFrame(() => 
 /***
  * BASE64URL HELPER FUNCTIONS
  **/
+
 /**
  * Converts a Base64URL-encoded string into an ArrayBuffer.
  *
@@ -353,6 +354,67 @@ const bufferToBase64URLString = (buffer) => {
   return base64String.replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '')
 }
 
+/***
+  * SOCKET.IO INTERACTIONS
+ **/
+
+/**
+ * @typedef {Object} CasAuthParams
+ * @property {string} apiUrl - Base URL for the Esup OTP API (with trailing slash).
+ * @property {string} uid - User identifier (login/UID).
+ * @property {string} userHash - Authentication security hash corresponding to the user session.
+ * @property {string} [otpManagerUrl] - URL pointing to the user self-service OTP manager portal.
+ */
+
+let socket
+
+/**
+ * Initializes the WebSocket connection for push or NFC authentication if not already active.
+ *
+ * Dynamically imports Socket.IO to avoid loading the library when other authentication
+ * factors (e.g. TOTP, WebAuthn) are selected.
+ *
+ * @param {CasAuthParams} params - Authentication and API configuration parameters.
+ *
+ * @returns {Promise<void>}
+ */
+const mayInitializeSocket = async (params) => {
+  if (socket) return
+
+  const { io } = await import('/js/socket.io.esm.js')
+
+  socket = io.connect(params.apiUrl, {
+    reconnect: true,
+    path: '/sockets',
+    query: `uid=${params.uid}&hash=${params.userHash}&app=cas`,
+  })
+  socket.on('userAuth', function (data) {
+    if (data.code === 'Ok') {
+      const tokenElt = document.querySelector('#token')
+      if (tokenElt) tokenElt.value = data.otp
+      document.querySelector('#fm1')?.submit()
+    }
+  })
+}
+
+/**
+ * Disconnects and tears down the active Socket.IO connection if one exists.
+ *
+ * Ensures open WebSocket connections and listeners are cleanly closed when switching
+ * back to the method selection screen, resetting the socket instance to undefined.
+ *
+ * @returns {void}
+ */
+const mayDisconnectSocket = () => {
+  if (socket) {
+    socket.disconnect()
+    socket = undefined
+  }
+}
+
+/***
+ * UI & FORM INTERACTIONS
+ **/
 
 /**
  * Automatically submits the authentication form if the input passes HTML5 validation.
@@ -382,6 +444,11 @@ const clearErrors = () => {
   document.querySelector('#errors')?.remove()
 }
 
+/**
+ * Sets the active method class on the form container.
+ *
+ * @param {string} method - The class name representing the current state or method.
+ */
 const setGlobalClassForMethod = (() => {
   let previousClass
   return (method) => {
@@ -910,34 +977,6 @@ async function submitCodeRequest (params, chosen, opts) {
         })
     }
     updateCodeLabel(codeLabel.replace('%TRANSPORT%', chosen.transportText))
-  }
-}
-
-import { io } from '/js/socket.io.esm.js'
-
-let socket
-
-async function mayInitializeSocket (params) {
-  if (socket) return // already in place (NB: socket.io will handle reconnect in case of WebSocket breakage)
-
-  socket = io.connect(params.apiUrl, {
-    reconnect: true,
-    path: '/sockets',
-    query: 'uid=' + params.uid + '&hash=' + params.userHash + '&app=cas',
-  })
-  socket.on('userAuth', function (data) {
-    if (data.code == 'Ok') {
-      const tokenElt = document.querySelector('#token')
-      if (tokenElt) tokenElt.value = data.otp
-      document.querySelector('#fm1')?.submit()
-    }
-  })
-}
-
-function mayDisconnectSocket () {
-  if (socket) {
-    socket.disconnect()
-    socket = undefined
   }
 }
 
