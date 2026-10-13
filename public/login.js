@@ -272,9 +272,11 @@ const renderChoices = () => {
  *
  * Mounts the active factor view and icon holder into the root container.
  *
+ * @param {AuthMethod} method - The authentication method for which to render the code input.
+ *
  * @returns {void}
  */
-const renderCodeInput = () => {
+const renderCodeInput = (method) => {
   if (!authContainer) return
 
   const containerElt = document.createElement('div')
@@ -299,6 +301,7 @@ const addHtmlTemplate = () => {
   authContainer = document.createElement('div')
   authContainer.id = 'auth-container'
   authContainer.classList.add('main1')
+  authContainer.tabIndex = -1
 
   /*`<div class="main1" id="auth-container">
         <div id="code" class="d-none">
@@ -545,6 +548,12 @@ export const millisecondsToFrenchText = (ms) => {
  **/
 
 /**
+ * Supported authentication method identifiers.
+ *
+ * @typedef {'webauthn' | 'push' | 'totp' | 'random_code_mail' | 'random_code' | 'passcode_grid' | 'esupnfc' | 'bypass'} AuthMethod
+ */
+
+/**
  * Options configuring UI behavior, icons, and callbacks for a method or transport.
  *
  * @typedef {Object} AuthMethodOptions
@@ -561,7 +570,7 @@ export const millisecondsToFrenchText = (ms) => {
  * A selectable authentication factor entry ready for UI rendering.
  *
  * @typedef {Object} AuthChoice
- * @property {string} method - Identifier of the authentication method (e.g. 'webauthn', 'totp', 'push').
+ * @property {AuthMethod} method - Identifier of the authentication method.
  * @property {string} transport - Transport identifier (e.g. 'mail', 'push', or empty string).
  * @property {string | undefined} transportText - Human-readable transport label (e.g. masked email or device model).
  * @property {string} text - Localized label to display on the button.
@@ -572,7 +581,7 @@ export const millisecondsToFrenchText = (ms) => {
  * Historical record of an OTP notification attempt or validation event.
  *
  * @typedef {Object} AuthEventLog
- * @property {string} [method] - The authentication method used.
+ * @property {AuthMethod} [method] - The authentication method used.
  * @property {number} [time] - Epoch timestamp in milliseconds.
  * @property {boolean} [auto] - Whether the attempt was triggered automatically.
  * @property {boolean} [verified] - Whether the factor was successfully verified.
@@ -582,7 +591,7 @@ export const millisecondsToFrenchText = (ms) => {
  * User configuration and status returned by the Esup OTP API (`/users/:uid/:hash`).
  *
  * @typedef {Object} UserOtpConfig
- * @property {Record<string, { active?: boolean, transports?: string[], [key: string]: any }>} methods - State and details of each supported factor.
+ * @property {Partial<Record<AuthMethod, { active?: boolean, transports?: string[], [key: string]: any }>> & { codeRequired?: boolean, waitingFor?: boolean }} methods - State and details of each supported factor.
  * @property {Record<string, string>} transports - Transport mapping (e.g. `{ mail: "...", push: "..." }`).
  * @property {AuthEventLog} [last_send_message] - Metadata about the last sent notification/challenge.
  * @property {AuthEventLog} [last_validated] - Metadata about the last successfully verified factor.
@@ -633,25 +642,20 @@ const setGlobalClassForMethod = (() => {
 })()
 
 function show (idToShow, method) {
-  ['no-choices', 'choices', 'code'].forEach(function (id) {
-    document.querySelector('#' + id)?.classList.toggle('d-none', id !== idToShow)
-  })
-  // focus on first focusable element
-  let elt = document.getElementById(idToShow).querySelector('button, [href], input, select, [tabindex]')
-  if (elt) elt.focus()
-
   switch (idToShow) {
     case 'choices':
-      setGlobalClassForMethod('show-choices')
+      renderChoices()
       mayDisconnectSocket()
       break
     case 'no-choices':
-      setGlobalClassForMethod('no-choices')
+      renderNoChoices()
       break
-    default:
-      setGlobalClassForMethod('method-' + method)
+    case 'code':
+      renderCodeInput(method)
       break
   }
+
+  authContainer.focus()
 }
 
 async function showMethod (params, chosen) {
@@ -1102,19 +1106,16 @@ const computeChoices = (_params, methodsAndTransports) => {
   return choices
 }
 
-function serverLog (vals) {
-  fetch('log?' + new URLSearchParams(vals))
-}
+const serverLog = async (vals) => fetch('log?' + new URLSearchParams(vals))
 
 async function displayChoices (params, userParams) {
-  let choices = computeChoices(params, userParams)
+  const choices = computeChoices(params, userParams)
   const service = new URLSearchParams(location.search).get('service')
   if (choices.length === 0) {
     show('no-choices')
     try {
-      serverLog({ warn: 'no-choices', uid: params.uid, service: service })
-    } catch (_e) {
-    }
+     await serverLog({ warn: 'no-choices', uid: params.uid, service: service })
+    } catch {}
     return
   }
 
