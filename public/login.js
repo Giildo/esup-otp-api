@@ -545,6 +545,51 @@ export const millisecondsToFrenchText = (ms) => {
  **/
 
 /**
+ * Options configuring UI behavior, icons, and callbacks for a method or transport.
+ *
+ * @typedef {Object} AuthMethodOptions
+ * @property {Record<string, string>} [label] - Map of transport-specific translation keys.
+ * @property {string} [overrideIcon] - Custom icon name replacing the default method icon.
+ * @property {boolean} [hideSubmitCode] - Whether the manual code input field is hidden.
+ * @property {string} [retryText] - Label text for the retry action button.
+ * @property {string} [codeLabelAfterSubmit] - Label or instructional text displayed after submitting/sending a code.
+ * @property {(params: CasAuthParams, chosen: AuthChoice) => (string | Promise<string>)} [codeLabel] - Generator for dynamic label text.
+ * @property {(params: CasAuthParams, chosen: AuthChoice, opts?: Record<string, any>) => (void | Promise<void>)} [initialise] - Lifecycle hook run after displaying the method.
+ */
+
+/**
+ * A selectable authentication factor entry ready for UI rendering.
+ *
+ * @typedef {Object} AuthChoice
+ * @property {string} method - Identifier of the authentication method (e.g. 'webauthn', 'totp', 'push').
+ * @property {string} transport - Transport identifier (e.g. 'mail', 'push', or empty string).
+ * @property {string | undefined} transportText - Human-readable transport label (e.g. masked email or device model).
+ * @property {string} text - Localized label to display on the button.
+ * @property {AuthMethodOptions} opts - Aggregated runtime options for this choice.
+ */
+
+/**
+ * Historical record of an OTP notification attempt or validation event.
+ *
+ * @typedef {Object} AuthEventLog
+ * @property {string} [method] - The authentication method used.
+ * @property {number} [time] - Epoch timestamp in milliseconds.
+ * @property {boolean} [auto] - Whether the attempt was triggered automatically.
+ * @property {boolean} [verified] - Whether the factor was successfully verified.
+ */
+
+/**
+ * User configuration and status returned by the Esup OTP API (`/users/:uid/:hash`).
+ *
+ * @typedef {Object} UserOtpConfig
+ * @property {Record<string, { active?: boolean, transports?: string[], [key: string]: any }>} methods - State and details of each supported factor.
+ * @property {Record<string, string>} transports - Transport mapping (e.g. `{ mail: "...", push: "..." }`).
+ * @property {AuthEventLog} [last_send_message] - Metadata about the last sent notification/challenge.
+ * @property {AuthEventLog} [last_validated] - Metadata about the last successfully verified factor.
+ * @property {boolean} [has_enabled_method] - Whether at least one factor is actively enabled.
+ */
+
+/**
  * Automatically submits the authentication form if the input passes HTML5 validation.
  *
  * Marks the form as `inert` upon submission to freeze user interactions and prevent
@@ -1019,36 +1064,41 @@ async function displayMethod (params, chosen, opts) {
 }
 
 /**
- * @returns {[{method: String, transport: String, transportText: ?String, text: String, opts: any}]}
+ * Evaluates configured authentication methods and formats active options into displayable choices.
+ *
+ * Traverses predefined methods in order of preference, matches them against the user's
+ * active methods and transports received from the API, and merges their display settings.
+ *
+ * @param {CasAuthParams} _params - Configuration parameters (unused, reserved for signature compatibility).
+ * @param {UserOtpConfig} methodsAndTransports - User factors and configuration retrieved from the Esup OTP API.
+ * @returns {AuthChoice[]} An ordered array of ready-to-render authentication choices.
  */
-function computeChoices (_params, methodsAndTransports) {
-  let choices = []
-  Object.entries(methods).forEach(function ([method, opts]) {
+const computeChoices = (_params, methodsAndTransports) => {
+  const choices = []
 
-    if (!(methodsAndTransports.methods[method] || {}).active) {
-      return
-    }
+  for (const [method, opts] of Object.entries(methods)) {
+    const userMethod = methodsAndTransports.methods?.[method]
+    if (!userMethod?.active) continue
 
-    var params = methodsAndTransports.methods[method];
+    const transportsList = userMethod.transports?.length ? userMethod.transports : ['']
 
-    (params.transports.length ? params.transports : ['']).forEach(function (transport) {
-      //if (transport !== '') return;
-      var transportText = transport && methodsAndTransports.transports[transport]
+    for (const transport of transportsList) {
+      const transportText = transport ? methodsAndTransports.transports?.[transport] : undefined
+
       if (opts.label[transport]) {
-        var text = opts.label[transport].replace('%TRANSPORT%', transportText)
         choices.push({
-          method: method,
-          transport: transport,
-          transportText: transportText,
-          text: text,
-          // to replace with { ... } when old Edge compatibility is not needed (cf neededObjectExpression > SpreadElement in eslint.config.js)
-          opts: Object.assign({}, opts, transports[transport]),
+          method,
+          transport,
+          transportText,
+          text: opts.label[transport].replace('%TRANSPORT%', transportText ?? ''),
+          opts: { ...opts, ...transports[transport] },
         })
       } else {
         console.error('weird transport', transport, 'for (pseudo) method', method)
       }
-    })
-  })
+    }
+  }
+
   return choices
 }
 
