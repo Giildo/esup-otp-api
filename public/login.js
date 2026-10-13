@@ -213,27 +213,94 @@ function orListToString (spans) {
 }
 
 /**
- * Init the HTML template for the login page.
+ * The main container element for authentication UI components.
+ *
+ * @type {HTMLElement | undefined}
+ */
+let authContainer
+
+/**
+ * Renders the view informing the user that no authentication factors are configured.
  *
  * @returns {void}
- *
- * @TODO Delete no used parts for a11y
  */
-function addHtmlTemplate () {
-  document.querySelector('form')?.insertAdjacentHTML(
-    'beforeend',
-    `<div class="main1">
-        <div id="no-choices" class="d-none">${_('no_choices_html')}</div>
+const renderNoChoices = () => {
+  if (!authContainer) return
 
-        <div id="choices">
-            <h2>${_('Use one of the following methods to log in')}</h2>
-            <div id="activateMoreMethods" class="d-none">${_('activateMoreMethods_html')}</div>
+  const noChoicesElt = document.createElement('div')
+  noChoicesElt.id = 'no-choices'
+  noChoicesElt.innerHTML = _('no_choices_html')
 
-            <ul id="methodChoices">
-                <li>${_('Please wait')}</li>
-            </ul>
-        </div>
-               
+  authContainer.replaceChildren(noChoicesElt)
+}
+
+/**
+ * Renders the authentication factor selection interface.
+ *
+ * Mounts the method choice header, enrollment suggestions container,
+ * and the placeholder method list into the root container using DOM nodes.
+ *
+ * @returns {void}
+ */
+const renderChoices = () => {
+  if (!authContainer) return
+
+  const choicesElt = document.createElement('div')
+  choicesElt.id = 'choices'
+
+  const titleElt = document.createElement('h2')
+  titleElt.innerHTML = _('Use one of the following methods to log in')
+  choicesElt.appendChild(titleElt)
+
+  const activateMoreMethodsElt = document.createElement('div')
+  activateMoreMethodsElt.id = 'activateMoreMethods'
+  activateMoreMethodsElt.innerHTML = _('activateMoreMethods_html')
+  choicesElt.appendChild(activateMoreMethodsElt)
+
+  const methodChoicesElt = document.createElement('ul')
+  methodChoicesElt.id = 'methodChoices'
+  const methodWaitElt = document.createElement('li')
+  methodWaitElt.textContent = _('Please wait')
+  methodChoicesElt.appendChild(methodWaitElt)
+  choicesElt.appendChild(methodChoicesElt)
+
+  authContainer.replaceChildren(choicesElt)
+}
+
+/**
+ * Renders the code challenge input container.
+ *
+ * Mounts the active factor view and icon holder into the root container.
+ *
+ * @returns {void}
+ */
+const renderCodeInput = () => {
+  if (!authContainer) return
+
+  const containerElt = document.createElement('div')
+  containerElt.id = 'code'
+
+  // TODO: revoir la structure du code HTML pour la suite pour ajouter selon le facteur
+
+  const imgElt = document.createElement('img')
+  imgElt.alt = ''
+  imgElt.id = 'page_icon'
+  containerElt.appendChild(imgElt)
+
+  authContainer.replaceChildren(containerElt)
+}
+
+/**
+ * Initializes and injects the root authentication container into the form.
+ *
+ * @returns {void}
+ */
+const addHtmlTemplate = () => {
+  authContainer = document.createElement('div')
+  authContainer.id = 'auth-container'
+  authContainer.classList.add('main1')
+
+  /*`<div class="main1" id="auth-container">
         <div id="code" class="d-none">
           <div>
             <p>
@@ -260,9 +327,8 @@ function addHtmlTemplate () {
           </div>
           <img alt="" id="page_icon">
         </div>
-      </div>
-    `,
-  )
+      </div>`,*/
+  document.querySelector('form')?.insertAdjacentElement('beforeend', authContainer)
 }
 
 /**
@@ -804,7 +870,7 @@ export function getUserOtpMethods_and_displayChoices (rawParams) {
 
   addHtmlTemplate()
 
-  document.getElementById('token')?.addEventListener('input', (e) => {
+  /*document.getElementById('token')?.addEventListener('input', (e) => {
     autoSubmitIfValid(e.target)
   })
 
@@ -815,8 +881,9 @@ export function getUserOtpMethods_and_displayChoices (rawParams) {
 
   configureLinkToOtpManager('#no-choices a', params)
   configureLinkToOtpManager('#activateMoreMethods a', params)
+  */
 
-  fetch(params.apiUrl + 'users/' + params.uid + '/' + params.userHash)
+  fetch(`${params.apiUrl}users/${params.uid}/methods/${params.userHash}`)
     .then(response => response.json())
     .then(async function (data) {
       if (data.code !== 'Ok') {
